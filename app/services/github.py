@@ -6,6 +6,62 @@ from fastapi import HTTPException
 from app.models import PRReviewResult
 from app.utils.diff_parser import annotate_diff # <-- NEW IMPORT
 
+# Map file extensions and special filenames to markdown language identifiers.
+_EXT_TO_LANG = {
+    ".py":    "python",
+    ".js":    "javascript",
+    ".jsx":   "jsx",
+    ".ts":    "typescript",
+    ".tsx":   "tsx",
+    ".java":  "java",
+    ".kt":    "kotlin",
+    ".rb":    "ruby",
+    ".rs":    "rust",
+    ".go":    "go",
+    ".c":     "c",
+    ".cpp":   "cpp",
+    ".cs":    "csharp",
+    ".php":   "php",
+    ".swift": "swift",
+    ".sh":    "bash",
+    ".bash":  "bash",
+    ".zsh":   "bash",
+    ".yaml":  "yaml",
+    ".yml":   "yaml",
+    ".json":  "json",
+    ".toml":  "toml",
+    ".html":  "html",
+    ".css":   "css",
+    ".scss":  "scss",
+    ".sql":   "sql",
+    ".md":    "markdown",
+    ".tf":    "hcl",
+    ".r":     "r",
+}
+_FILENAME_TO_LANG = {
+    "dockerfile":        "dockerfile",
+    "makefile":          "makefile",
+    ".env":              "bash",
+    ".gitignore":        "bash",
+    "docker-compose.yml": "yaml",
+}
+
+def get_language_from_filename(file_path: str) -> str:
+    """Return the markdown code-fence language identifier for a given file path.
+
+    Falls back to the bare extension (without the dot) for unknown types so that
+    the code block is at least annotated, or to an empty string if no extension
+    is present.
+    """
+    basename = os.path.basename(file_path).lower()
+    if basename in _FILENAME_TO_LANG:
+        return _FILENAME_TO_LANG[basename]
+    _, ext = os.path.splitext(basename)
+    if ext in _EXT_TO_LANG:
+        return _EXT_TO_LANG[ext]
+    # Unknown extension: strip the leading dot and use it as-is (e.g. ".rb" -> "rb")
+    return ext.lstrip(".") if ext else ""
+
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 if not GITHUB_TOKEN:
     print("WARNING: GITHUB_TOKEN environment variable is not set!")
@@ -59,7 +115,7 @@ def post_pr_review(repo_name: str, pr_number: int, review_data: PRReviewResult):
             body = (
                 f"**[{comment.severity.upper()}]** {comment.summary}\n\n"
                 f"**Why it matters:** {comment.explanation}\n\n"
-                f"**Suggested Fix:**\n```python\n{comment.suggested_fix}\n```"
+                f"**Suggested Fix:**\n```{get_language_from_filename(comment.file_path)}\n{comment.suggested_fix}\n```"
             )
             try:
                 pr.create_review_comment(
