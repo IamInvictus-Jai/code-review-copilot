@@ -37,6 +37,33 @@ class ConventionRequest(BaseModel):
     rule: str
 
 # --- ENDPOINTS ---
+@app.get("/health")
+async def health_check():
+    """Endpoint to check API health, environment mode, and environment configuration."""
+    environment = os.getenv("ENVIRONMENT", "development")
+    
+    github_token = os.getenv("GITHUB_TOKEN")
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    webhook_secret = os.getenv("WEBHOOK_SECRET")
+    pinecone_api_key = os.getenv("PINECONE_API_KEY")
+    
+    required_vars = {
+        "GITHUB_TOKEN": bool(github_token),
+        "GEMINI_API_KEY": bool(gemini_api_key),
+        "WEBHOOK_SECRET": bool(webhook_secret),
+    }
+    
+    if environment == "production":
+        required_vars["PINECONE_API_KEY"] = bool(pinecone_api_key)
+        
+    is_healthy = all(required_vars.values())
+    
+    return {
+        "status": "healthy" if is_healthy else "unhealthy",
+        "environment": environment,
+        "configuration": required_vars
+    }
+
 @app.post("/conventions/learn")
 async def add_house_rule(request: ConventionRequest):
     """Endpoint to teach the Copilot a new house rule."""
