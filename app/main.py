@@ -39,7 +39,7 @@ class ConventionRequest(BaseModel):
     rule: str = Field(min_length=1)
 
 # --- ENDPOINTS ---
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
     """Endpoint to check API health, environment mode, and environment configuration."""
     environment = os.getenv("ENVIRONMENT", "development")
