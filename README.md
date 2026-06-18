@@ -26,32 +26,60 @@ An autonomous, self-learning Code Review Copilot built with FastAPI, LangChain, 
 ## 🚀 Quickstart & Installation
 
 ### 1. Prerequisites
-* Docker and Docker Compose installed.
-* A GitHub Personal Access Token (with `repo` and `pull_requests:write` permissions).
-* A Google Gemini API Key.
-* (Optional) A Pinecone API Key for production.
+* **Docker and Docker Compose** installed.
+* **Google Gemini API Key**: Get a free or paid API key from [Google AI Studio](https://aistudio.google.com/). (Required for embeddings and code review reasoning in both dev/prod).
+* **GitHub Personal Access Token (PAT)**:
+  * **Fine-Grained Token (Recommended)**:
+    * Select your target repositories.
+    * Grant **Repository permissions**:
+      * **Pull requests**: `Read and Write` (to fetch diffs and post review comments).
+      * **Contents**: `Read-only` (to access code files).
+      * **Metadata**: `Read-only` (automatically added).
+  * **Classic Token**:
+    * Check the `repo` scope.
+* **ngrok** (Optional): Required for local development to expose the webhook to GitHub. Install via `brew install ngrok/ngrok/ngrok` (macOS) or download from [ngrok.com](https://ngrok.com/).
 
-### 2. Environment Variables
-Create a `.env` file in the root directory:
+### 2. Environment Variables (.env Setup)
+Duplicate the example environment file:
+```bash
+cp .env.example .env
+```
+
+Open `.env` and configure the following variables:
 ```env
-GITHUB_TOKEN=your_github_token
-GEMINI_API_KEY=your_gemini_key
-WEBHOOK_SECRET=your_secure_random_string
+# GitHub & Gemini Settings
+GITHUB_TOKEN=github_pat_xxx
+GEMINI_API_KEY=AIzaSyxxx
+WEBHOOK_SECRET=your_custom_webhook_secret_string
 
-# For Production (Optional)
-ENVIRONMENT=development # Change to 'production' to use Pinecone
+# Environment Mode
+ENVIRONMENT=development # Set to 'production' to route to Pinecone
+
+# Production Settings (Optional)
 PINECONE_API_KEY=your_pinecone_key
 ```
 
-### 3. Build and Run
-Start the API and local ChromaDB containers:
+> [!TIP]
+> **Generating a secure WEBHOOK_SECRET:**
+> You can generate a cryptographically secure 32-byte hexadecimal string using:
+> * **macOS/Linux**: `openssl rand -hex 32`
+> * **Python**: `python -c "import secrets; print(secrets.token_hex(32))"`
 
+### 3. Local Webhook Tunneling (ngrok)
+To test locally, start an HTTP tunnel forwarding to port `8000`:
+```bash
+ngrok http 8000
+```
+Copy the secure forwarding URL (e.g. `https://xxxx-xx-xx-xx-xx.ngrok-free.app`). Your webhook URL will be:
+`https://xxxx-xx-xx-xx-xx.ngrok-free.app/webhook/github`
+
+### 4. Build and Run
+Start the FastAPI server and local ChromaDB containers:
 ```bash
 docker-compose up --build -d
 ```
-
-The FastAPI server will be available at http://localhost:8000.
-Access the interactive API documentation at http://localhost:8000/docs.
+* The FastAPI server is available at: http://localhost:8000
+* Interactive API documentation (Swagger UI) is available at: http://localhost:8000/docs
 
 ### 4. Run Tests
 The core request-handling and diff-parsing behavior can be checked without live GitHub, Gemini, or Chroma credentials:
@@ -62,17 +90,19 @@ python -m unittest discover -s tests
 
 ---
 
-## 🛠️ Usage
-### Configuring the GitHub Webhook
-1. Go to your GitHub Repository -> Settings -> Webhooks -> Add webhook.
+## 🛠️ Webhook Configuration on GitHub
 
-2. Payload URL: https://your-public-url.com/webhook/github (Use ngrok if testing locally).
+Configure your GitHub repository to stream Pull Request events to the API:
 
-3. Content type: application/json.
-
-4. Secret: Paste the WEBHOOK_SECRET from your .env file.
-
-5. Select Let me select individual events and check Pull requests.
+1. Go to your GitHub Repository -> **Settings** -> **Webhooks** -> **Add webhook**.
+2. **Payload URL**: Paste the URL generated in the ngrok step (e.g., `https://xxxx-xx-xx-xx-xx.ngrok-free.app/webhook/github`) or your public domain.
+3. **Content type**: Select `application/json` (Do **not** use `application/x-www-form-urlencoded`).
+4. **Secret**: Enter the exact `WEBHOOK_SECRET` string from your `.env` file.
+5. **Which events would you like to trigger this webhook?**:
+   * Select **Let me select individual events**.
+   * Check **Pull requests**.
+   * Uncheck all other events.
+6. Click **Add webhook** to save.
 
 ---
 
