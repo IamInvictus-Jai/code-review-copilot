@@ -158,12 +158,20 @@ class LoggingContext:
     """Context manager for setting logging context.
     
     This allows using 'with' statements to set context that automatically
-    gets cleaned up when exiting the block.
+    gets restored to its previous state when exiting the block. This enables
+    proper nesting of context managers without losing outer context.
     
     Example:
         with LoggingContext(repo_name="owner/repo", pr_number=42):
             # All logs in this block will include repo_name and pr_number
             logger.info("Processing PR")
+            
+            with LoggingContext(pr_number=43):
+                # Inner context temporarily changes pr_number
+                logger.info("Processing another PR")
+            
+            # After exiting inner context, pr_number is restored to 42
+            logger.info("Back to original PR")
     """
     
     def __init__(self, **kwargs: Any):
@@ -173,31 +181,41 @@ class LoggingContext:
             **kwargs: Context variables to set (repo_name, pr_number, etc.)
         """
         self.context = kwargs
-        self.previous_context: Dict[str, Any] = {}
+        self.tokens: Dict[str, Any] = {}
     
     def __enter__(self) -> 'LoggingContext':
-        """Enter the context and set variables."""
-        # Save previous context
-        self.previous_context = get_all_context()
-        
-        # Set new context
+        """Enter the context and set variables, storing tokens for restoration."""
+        # Set new context and store tokens for restoration
         if 'request_id' in self.context:
-            set_request_id(self.context['request_id'])
+            self.tokens['request_id'] = _request_id.set(self.context['request_id'])
         if 'repo_name' in self.context:
-            set_repo_name(self.context['repo_name'])
+            self.tokens['repo_name'] = _repo_name.set(self.context['repo_name'])
         if 'pr_number' in self.context:
-            set_pr_number(self.context['pr_number'])
+            self.tokens['pr_number'] = _pr_number.set(self.context['pr_number'])
         
         # Set any other custom context
         for key, value in self.context.items():
             if key not in ['request_id', 'repo_name', 'pr_number']:
-                set_context(key, value)
+                # For custom context, store previous value
+                prev_custom = _custom_context.get().copy()
+                prev_custom[key] = value
+                self.tokens[f'custom_{key}'] = _custom_context.set(prev_custom)
         
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the context and restore previous variables."""
-        # This could restore previous context, but for now we just clear
-        # to avoid context leaking between requests
-        clear_context()
+        """Exit the context and restore previous state using stored tokens."""
+        # Restore context variables to their previous state
+        if 'request_id' in self.tokens:
+            _request_id.reset(self.tokens['request_id'])
+        if 'repo_name' in self.tokens:
+            _repo_name.reset(self.tokens['repo_name'])
+        if 'pr_number' in self.tokens:
+            _pr_number.reset(self.tokens['pr_number'])
+        
+        # Restore custom context variables
+        for key, token in self.tokens.items():
+            if key.startswith('custom_'):
+                _custom_context.reset(token)
+        
         return False

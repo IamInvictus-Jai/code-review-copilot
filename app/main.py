@@ -197,6 +197,13 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks, x_
 
     action = payload.get("action")
     repo_name = payload.get("repository", {}).get("full_name")
+    pr_number = payload.get("pull_request", {}).get("number")
+    
+    # Set context as early as possible after parsing
+    if repo_name:
+        set_repo_name(repo_name)
+    if isinstance(pr_number, int):
+        set_pr_number(pr_number)
     
     logger.info(
         "GitHub webhook received",
@@ -218,14 +225,9 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks, x_
         )
         return {"status": "ignored", "reason": f"Action '{action}' is not reviewable"}
 
-    pr_number = payload.get("pull_request", {}).get("number")
     if not isinstance(pr_number, int):
         logger.error("Pull request number missing or invalid in webhook payload")
         raise HTTPException(status_code=400, detail="Pull request number missing from payload")
-    
-    # Set context for all subsequent logs
-    set_repo_name(repo_name)
-    set_pr_number(pr_number)
     
     logger.info(
         "Processing PR for review",

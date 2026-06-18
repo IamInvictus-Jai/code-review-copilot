@@ -38,6 +38,14 @@ class FileLogger:
         
         Args:
             name: Logger name (typically __name__ from calling module)
+        
+        Note:
+            Uses f"{name}_file" as the underlying logger name to prevent handler
+            conflicts when LOG_TYPE="both". This creates two distinct Python logging
+            loggers (e.g., "app.main" for console, "app.main_file" for file) for the
+            same logical component, ensuring independent handler configuration and
+            avoiding duplicate log entries. This design allows multiple handlers to
+            coexist without interfering with each other's configuration.
         """
         self.logger = logging.getLogger(f"{name}_file")
         self.logger.setLevel(LoggingConfig.get_log_level_int())

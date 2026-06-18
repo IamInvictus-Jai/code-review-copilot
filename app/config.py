@@ -47,13 +47,30 @@ class LoggingConfig:
         """Validate logging configuration.
         
         Raises:
-            ValueError: If LOG_LEVEL is not a valid logging level
+            ValueError: If any configuration value is invalid
         """
+        # Validate LOG_LEVEL
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if cls.LOG_LEVEL not in valid_levels:
             raise ValueError(
                 f"Invalid LOG_LEVEL: {cls.LOG_LEVEL}. "
                 f"Must be one of {valid_levels}"
+            )
+        
+        # Validate LOG_TYPE
+        valid_types = ["console", "file", "both", "cloud"]
+        if cls.LOG_TYPE not in valid_types:
+            raise ValueError(
+                f"Invalid LOG_TYPE: {cls.LOG_TYPE}. "
+                f"Must be one of {valid_types}"
+            )
+        
+        # Validate LOG_FORMAT
+        valid_formats = ["json", "text"]
+        if cls.LOG_FORMAT not in valid_formats:
+            raise ValueError(
+                f"Invalid LOG_FORMAT: {cls.LOG_FORMAT}. "
+                f"Must be one of {valid_formats}"
             )
     
     @classmethod
