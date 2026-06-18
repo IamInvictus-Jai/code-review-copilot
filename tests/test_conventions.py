@@ -26,9 +26,13 @@ class TestConventionsEndpoint(unittest.TestCase):
                 "repo_name": "owner/repo"
             }
         )
+        
         self.assertEqual(response.status_code, 200)
+        
+        # ADDED: "repo_name" to match the new multi-tenant API response
         self.assertEqual(response.json(), {
             "status": "success",
+            "repo_name": "owner/repo", 
             "message": "Learned new rule: Always use logging instead of print"
         })
         

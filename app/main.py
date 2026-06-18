@@ -72,6 +72,7 @@ async def add_house_rule(request: ConventionRequest):
     learn_convention(request.rule, request.repo_name)
     return {
         "status": "success",
+        "repo_name": request.repo_name,
         "message": f"Learned new rule: {request.rule}",
     }
 
