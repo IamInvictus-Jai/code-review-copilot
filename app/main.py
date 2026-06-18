@@ -35,6 +35,7 @@ class ManualReviewRequest(BaseModel):
 
 class ConventionRequest(BaseModel):
     rule: str
+    repo_name: str
 
 # --- ENDPOINTS ---
 @app.get("/health")
@@ -67,7 +68,7 @@ async def health_check():
 @app.post("/conventions/learn")
 async def add_house_rule(request: ConventionRequest):
     """Endpoint to teach the Copilot a new house rule."""
-    learn_convention(request.rule)
+    learn_convention(request.rule, request.repo_name)
     return {"status": "success", "message": f"Learned new rule: {request.rule}"}
 
 @app.post("/review/manual")
