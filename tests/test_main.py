@@ -47,7 +47,12 @@ def load_main_with_fake_services(secret: str = "unit-test-secret"):
 
     def analyze_pr_diff(diff, house_rules="None"):
         calls["analyze_pr_diff"] = (diff, house_rules)
-        return SimpleNamespace(risk_summary="No major risks")
+        return SimpleNamespace(
+            risk_summary="No major risks",
+            risk_score=3,
+            merge_decision="APPROVE",
+            comments=[]
+        )
 
     fake_reviewer.analyze_pr_diff = analyze_pr_diff
 
