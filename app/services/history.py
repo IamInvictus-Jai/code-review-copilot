@@ -12,27 +12,44 @@ logger = get_logger(__name__)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Store the tracking file in the root of the Docker container
 TRACKING_FILE = "processed_repos.json"
 
 def has_been_processed(repo_name: str) -> bool:
     """Checks if the Owner/Repo_Name has already had its history analyzed."""
     if not os.path.exists(TRACKING_FILE):
         return False
-    with open(TRACKING_FILE, "r") as f:
-        return repo_name in json.load(f)
+    try:
+        with open(TRACKING_FILE, "r") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return repo_name in data
+            logging.warning(f"Tracking file {TRACKING_FILE} does not contain a list.")
+            return False
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logging.warning(f"Corrupted or invalid tracking file {TRACKING_FILE}: {e}")
+        return False
 
 def mark_as_processed(repo_name: str):
     """Flags the Owner/Repo_Name as complete to ensure idempotency."""
     processed = []
     if os.path.exists(TRACKING_FILE):
-        with open(TRACKING_FILE, "r") as f:
-            processed = json.load(f)
+        try:
+            with open(TRACKING_FILE, "r") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    processed = data
+                else:
+                    logging.warning(f"Tracking file {TRACKING_FILE} did not contain a list. Resetting.")
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logging.warning(f"Corrupted or invalid tracking file {TRACKING_FILE}: {e}. Resetting.")
             
     if repo_name not in processed:
         processed.append(repo_name)
-        with open(TRACKING_FILE, "w") as f:
-            json.dump(processed, f)
+        try:
+            with open(TRACKING_FILE, "w") as f:
+                json.dump(processed, f)
+        except Exception as e:
+            logging.error(f"Failed to write tracking file {TRACKING_FILE}: {e}")
 
 def extract_rules_from_history_task(repo_name: str):
     """BACKGROUND TASK: Scrapes merged PRs, extracts rules, and saves them.

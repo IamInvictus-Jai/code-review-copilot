@@ -9,3 +9,5 @@ docs/
 
 # Log files
 logs/
+.venv/
+*.pyc

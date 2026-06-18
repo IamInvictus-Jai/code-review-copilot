@@ -55,7 +55,9 @@ def get_vector_store(repo_name: str):
         # ChromaDB isolates data using separate 'collections'
         # Chroma requires alphanumeric collection names without slashes
         safe_repo_name = repo_name.replace("/", "_").replace("-", "_")
-        chroma_client = chromadb.HttpClient(host="chromadb", port=8000)
+        chroma_host = os.getenv("CHROMA_HOST", "chromadb")
+        chroma_port = int(os.getenv("CHROMA_PORT", "8000"))
+        chroma_client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
         
         return Chroma(
             client=chroma_client,
