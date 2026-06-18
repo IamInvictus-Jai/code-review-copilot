@@ -21,12 +21,12 @@ def has_been_processed(repo_name: str) -> bool:
     try:
         with open(TRACKING_FILE, "r") as f:
             data = json.load(f)
-            if isinstance(data, list):
-                return repo_name in data
-            logging.warning(f"Tracking file {TRACKING_FILE} does not contain a list.")
-            return False
-    except (json.JSONDecodeError, TypeError, ValueError) as e:
-        logging.warning(f"Corrupted or invalid tracking file {TRACKING_FILE}: {e}")
+            if not isinstance(data, list):
+                logger.warning(f"Tracking file {TRACKING_FILE} does not contain a list.")
+                return False
+            return repo_name in data
+    except json.JSONDecodeError as e:
+        logger.warning(f"Corrupted or invalid tracking file {TRACKING_FILE}: {e}")
         return False
 
 def mark_as_processed(repo_name: str):
@@ -36,12 +36,14 @@ def mark_as_processed(repo_name: str):
         try:
             with open(TRACKING_FILE, "r") as f:
                 data = json.load(f)
-                if isinstance(data, list):
-                    processed = data
+                if not isinstance(data, list):
+                    logger.warning(f"Tracking file {TRACKING_FILE} did not contain a list. Resetting.")
+                    processed = []
                 else:
-                    logging.warning(f"Tracking file {TRACKING_FILE} did not contain a list. Resetting.")
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
-            logging.warning(f"Corrupted or invalid tracking file {TRACKING_FILE}: {e}. Resetting.")
+                    processed = data
+        except json.JSONDecodeError as e:
+            logger.warning(f"Corrupted or invalid tracking file {TRACKING_FILE}: {e}. Resetting.")
+            processed = []
             
     if repo_name not in processed:
         processed.append(repo_name)
