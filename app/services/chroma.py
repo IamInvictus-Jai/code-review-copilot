@@ -1,9 +1,12 @@
-import logging
 import os
 import chromadb
 from langchain_chroma import Chroma
 from langchain_pinecone import PineconeVectorStore
 import google.generativeai as genai
+from app.logging import get_logger
+
+# Initialize logger
+logger = get_logger(__name__)
 
 # 1. Setup the Gemini Embedding Model
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -61,21 +64,105 @@ def get_vector_store(repo_name: str):
         )
 
 def learn_convention(rule: str, repo_name: str):
-    """Embeds and saves a new coding rule to the repo's specific namespace."""
-    vector_store = get_vector_store(repo_name)
-    vector_store.add_texts(texts=[rule])
-    return True
+    """Embeds and saves a new coding rule to the repo's specific namespace.
+    
+    Args:
+        rule: Coding convention to store
+        repo_name: Repository name for isolation
+        
+    Returns:
+        True if successful
+    """
+    logger.info(
+        "Learning new coding convention",
+        extra={
+            "repo_name": repo_name,
+            "rule_length": len(rule),
+            "environment": ENVIRONMENT
+        }
+    )
+    
+    try:
+        vector_store = get_vector_store(repo_name)
+        vector_store.add_texts(texts=[rule])
+        
+        logger.info(
+            "Coding convention learned successfully",
+            extra={
+                "repo_name": repo_name,
+                "environment": ENVIRONMENT
+            }
+        )
+        
+        return True
+        
+    except Exception as e:
+        logger.error(
+            "Failed to learn coding convention",
+            exc_info=True,
+            extra={
+                "repo_name": repo_name,
+                "rule_length": len(rule),
+                "environment": ENVIRONMENT
+            }
+        )
+        raise
 
 def retrieve_relevant_rules(diff_text: str, repo_name: str) -> str:
-    """Finds the top 3 most relevant rules exclusively for this repo."""
+    """Finds the top 3 most relevant rules exclusively for this repo.
+    
+    Args:
+        diff_text: PR diff to search against
+        repo_name: Repository name for isolation
+        
+    Returns:
+        Formatted string of relevant rules or "None"
+    """
+    logger.debug(
+        "Retrieving relevant coding rules",
+        extra={
+            "repo_name": repo_name,
+            "diff_length": len(diff_text),
+            "environment": ENVIRONMENT,
+            "vector_store": "Pinecone" if ENVIRONMENT == "production" else "ChromaDB"
+        }
+    )
+    
     try:
         vector_store = get_vector_store(repo_name)
         results = vector_store.similarity_search(query=diff_text, k=3)
         
         if not results:
+            logger.info(
+                "No relevant rules found in vector store",
+                extra={
+                    "repo_name": repo_name,
+                    "environment": ENVIRONMENT
+                }
+            )
             return "None"
         
+        logger.info(
+            "Retrieved relevant coding rules",
+            extra={
+                "repo_name": repo_name,
+                "rule_count": len(results),
+                "environment": ENVIRONMENT,
+                "vector_store": "Pinecone" if ENVIRONMENT == "production" else "ChromaDB"
+            }
+        )
+        
         return "\n".join([f"- {doc.page_content}" for doc in results])
+        
     except Exception as e:
-        logging.error(f"Error retrieving rules for {repo_name}: {e}")
+        logger.error(
+            "Error retrieving rules from vector store",
+            exc_info=True,
+            extra={
+                "repo_name": repo_name,
+                "diff_length": len(diff_text),
+                "environment": ENVIRONMENT,
+                "vector_store": "Pinecone" if ENVIRONMENT == "production" else "ChromaDB"
+            }
+        )
         return "None"

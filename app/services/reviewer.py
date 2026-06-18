@@ -1,16 +1,20 @@
 import os
-import logging
+import time
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from app.models import PRReviewResult
+from app.logging import get_logger
+
+# Initialize logger
+logger = get_logger(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     google_api_key=GEMINI_API_KEY,
-    temperature=0.0 # Dropped to 0 for maximum strictness
+    temperature=0.0  # Dropped to 0 for maximum strictness
 )
 
 parser = PydanticOutputParser(pydantic_object=PRReviewResult)
@@ -35,7 +39,23 @@ You MUST output EXACTLY and ONLY a valid JSON object matching this schema:
 """
 
 def analyze_pr_diff(diff: str, house_rules: str = "None") -> PRReviewResult:
-    """Main entry point for analyzing the diff. Imported by main.py."""
+    """Analyze a PR diff using Gemini AI and return structured review results.
+    
+    Args:
+        diff: Annotated git diff with line numbers
+        house_rules: Retrieved coding conventions from vector store
+        
+    Returns:
+        PRReviewResult containing risk score, comments, and merge decision
+    """
+    logger.info(
+        "Starting PR diff analysis",
+        extra={
+            "diff_length": len(diff),
+            "house_rules_present": house_rules != "None",
+            "house_rules_length": len(house_rules) if house_rules != "None" else 0
+        }
+    )
     
     prompt = PromptTemplate(
         template=REVIEW_PROMPT,
@@ -45,14 +65,44 @@ def analyze_pr_diff(diff: str, house_rules: str = "None") -> PRReviewResult:
     
     chain = prompt | llm | parser
     
+    start_time = time.time()
+    
     try:
-        return chain.invoke({
+        logger.debug("Invoking Gemini AI for code analysis")
+        
+        result = chain.invoke({
             "house_rules": house_rules,
             "diff": diff
         })
         
+        duration_ms = int((time.time() - start_time) * 1000)
+        
+        logger.info(
+            "PR diff analysis completed successfully",
+            extra={
+                "risk_score": result.risk_score,
+                "merge_decision": result.merge_decision,
+                "comment_count": len(result.comments),
+                "duration_ms": duration_ms
+            }
+        )
+        
+        return result
+        
     except Exception as e:
-        logging.error(f"Error analyzing PR diff: {e}")
+        duration_ms = int((time.time() - start_time) * 1000)
+        
+        logger.error(
+            "Error analyzing PR diff",
+            exc_info=True,
+            extra={
+                "diff_length": len(diff),
+                "house_rules_length": len(house_rules) if house_rules != "None" else 0,
+                "duration_ms": duration_ms,
+                "error_type": type(e).__name__
+            }
+        )
+        
         return PRReviewResult(
             risk_score=1,
             risk_summary="The AI Reviewer encountered a parsing error.",
