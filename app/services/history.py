@@ -60,7 +60,7 @@ def extract_rules_from_history_task(repo_name: str):
     
     gh = Github(GITHUB_TOKEN)
     genai.configure(api_key=GEMINI_API_KEY)
-    llm = genai.GenerativeModel('gemini-1.5-flash')
+    llm = genai.GenerativeModel('gemini-2.5-flash')
 
     try:
         # repo_name is guaranteed to be "Owner/Repo_Name"
