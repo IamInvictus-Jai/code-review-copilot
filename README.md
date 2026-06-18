@@ -81,6 +81,13 @@ docker-compose up --build -d
 * The FastAPI server is available at: http://localhost:8000
 * Interactive API documentation (Swagger UI) is available at: http://localhost:8000/docs
 
+### 4. Run Tests
+The core request-handling and diff-parsing behavior can be checked without live GitHub, Gemini, or Chroma credentials:
+
+```bash
+python -m unittest discover -s tests
+```
+
 ---
 
 ## 🛠️ Webhook Configuration on GitHub
