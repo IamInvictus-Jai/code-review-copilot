@@ -8,7 +8,7 @@ from app.models import PRReviewResult
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
+    model="gemini-1.5-flash",
     google_api_key=GEMINI_API_KEY,
     temperature=0.0 # Dropped to 0 for maximum strictness
 )
