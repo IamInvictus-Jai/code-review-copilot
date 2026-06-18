@@ -6,3 +6,6 @@ tmp/
 backup/
 docs/
 .kiro/
+
+# Log files
+logs/
