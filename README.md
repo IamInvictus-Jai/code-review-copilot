@@ -34,13 +34,24 @@ An autonomous, self-learning Code Review Copilot built with FastAPI, LangChain, 
 ### 2. Environment Variables
 Create a `.env` file in the root directory:
 ```env
+# Required
 GITHUB_TOKEN=your_github_token
 GEMINI_API_KEY=your_gemini_key
 WEBHOOK_SECRET=your_secure_random_string
 
+# Environment (development or production)
+ENVIRONMENT=development
+
 # For Production (Optional)
-ENVIRONMENT=development # Change to 'production' to use Pinecone
 PINECONE_API_KEY=your_pinecone_key
+
+# Logging Configuration
+LOG_LEVEL=INFO                      # DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_TYPE=console                    # console, file, both, cloud
+LOG_FILE_PATH=logs/app.log
+LOG_FILE_MAX_SIZE=10485760         # 10MB in bytes
+LOG_FILE_BACKUP_COUNT=5
+LOG_FORMAT=json                     # json or text
 ```
 
 ### 3. Build and Run
@@ -99,3 +110,65 @@ The moment a new PR is opened or synchronized, the API will immediately trigger 
 
 ## 🛡️ Security
 This application implements HMAC SHA256 signature validation to ensure all incoming webhooks are strictly authenticated by GitHub, preventing unauthorized access or abuse.
+
+---
+
+## 📊 Logging System
+
+The application features a comprehensive, production-ready logging system with:
+
+### Features
+* **Structured Logging**: JSON format for machine parsing or text for human reading
+* **Multiple Backends**: Console (dev), file with rotation (prod), or both
+* **Request Tracking**: Unique request IDs for end-to-end tracing
+* **Context Propagation**: Automatic inclusion of repo_name, pr_number in all logs
+* **Performance Metrics**: Built-in timing for all operations
+* **Global Exception Handling**: All errors logged with full stack traces
+
+### Quick Configuration
+
+**Development (Console):**
+```env
+LOG_TYPE=console
+LOG_FORMAT=text
+LOG_LEVEL=DEBUG
+```
+
+**Production (File):**
+```env
+LOG_TYPE=file
+LOG_FORMAT=json
+LOG_LEVEL=INFO
+LOG_FILE_PATH=logs/app.log
+```
+
+### Log Output Examples
+
+**JSON Format (Machine-readable):**
+```json
+{
+  "message": "PR analysis completed",
+  "level": "INFO",
+  "request_id": "req_abc123",
+  "repo_name": "owner/repo",
+  "pr_number": 42,
+  "risk_score": 3,
+  "duration_ms": 1234
+}
+```
+
+**Text Format (Human-readable):**
+```
+2024-06-18 10:30:45 | INFO | reviewer.analyze_pr_diff | PR analysis completed | request_id=req_abc123 repo_name=owner/repo pr_number=42
+```
+
+### Detailed Documentation
+
+For comprehensive logging documentation including:
+- Architecture and components
+- Usage examples and best practices
+- Request tracking and context propagation
+- Troubleshooting and performance tips
+- Extending with cloud logging
+
+See **[docs/LOGGING.md](docs/LOGGING.md)**
