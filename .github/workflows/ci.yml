@@ -11,6 +11,7 @@ on:
 env:
   GEMINI_API_KEY: "dummy_key_for_testing"
   WEBHOOK_SECRET: "dummy_secret_for_testing"
+  GITHUB_TOKEN: "dummy_token_for_testing"
 
 jobs:
   test:
