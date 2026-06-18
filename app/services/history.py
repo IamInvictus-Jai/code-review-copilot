@@ -8,7 +8,6 @@ from app.services.chroma import learn_convention
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Store the tracking file in the root of the Docker container
 TRACKING_FILE = "processed_repos.json"
 
 def has_been_processed(repo_name: str) -> bool:
